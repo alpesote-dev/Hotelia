@@ -1,0 +1,6 @@
+{
+  "name": "Hotelia",
+  "description": "Aplicación de gestión hotelera para administrar reservas, habitaciones, check-ins y check-outs de manera eficiente.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

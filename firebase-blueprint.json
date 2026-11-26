@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "Habitacion del hotel gestionada por el usuario propietario.",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string",
+          "description": "Numero o identificador visible de la habitacion (ej. 101, 204)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["STANDARD", "DELUXE", "SUITE", "PENTHOUSE"],
+          "description": "Categoria de la habitacion."
+        },
+        "floor": {
+          "type": "integer",
+          "description": "Piso donde se ubica la habitacion (1-50)."
+        },
+        "nightlyRate": {
+          "type": "number",
+          "description": "Tarifa por noche en moneda local."
+        },
+        "capacity": {
+          "type": "integer",
+          "description": "Capacidad maxima de huespedes (1-12)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["AVAILABLE", "OCCUPIED", "CLEANING", "MAINTENANCE"],
+          "description": "Estado operativo actual de la habitacion."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notas opcionales sobre amenidades o mantenimiento."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de creacion del servidor (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de ultima actualizacion del servidor (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "number",
+        "type",
+        "floor",
+        "nightlyRate",
+        "capacity",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Reserva de estancia con ciclo de confirmacion, check-in y check-out.",
+      "type": "object",
+      "properties": {
+        "guestName": {
+          "type": "string",
+          "description": "Nombre completo del huesped titular."
+        },
+        "guestEmail": {
+          "type": "string",
+          "description": "Correo electronico opcional del huesped."
+        },
+        "guestPhone": {
+          "type": "string",
+          "description": "Telefono opcional de contacto."
+        },
+        "guestDocument": {
+          "type": "string",
+          "description": "Documento de identidad o pasaporte opcional."
+        },
+        "roomId": {
+          "type": "string",
+          "description": "ID del documento de la habitacion asignada."
+        },
+        "roomNumber": {
+          "type": "string",
+          "description": "Numero de la habitacion desnormalizado para consulta rapida."
+        },
+        "roomType": {
+          "type": "string",
+          "enum": ["STANDARD", "DELUXE", "SUITE", "PENTHOUSE"],
+          "description": "Categoria de la habitacion asignada."
+        },
+        "checkInDate": {
+          "type": "string",
+          "description": "Fecha prevista de entrada en formato ISO YYYY-MM-DD."
+        },
+        "checkOutDate": {
+          "type": "string",
+          "description": "Fecha prevista de salida en formato ISO YYYY-MM-DD."
+        },
+        "guestsCount": {
+          "type": "integer",
+          "description": "Cantidad de huespedes (1-12)."
+        },
+        "nightlyRate": {
+          "type": "number",
+          "description": "Tarifa aplicada por noche."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Importe total de la estancia."
+        },
+        "paidAmount": {
+          "type": "number",
+          "description": "Importe abonado hasta el momento."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"],
+          "description": "Estado del ciclo de reserva."
+        },
+        "specialRequests": {
+          "type": "string",
+          "description": "Preferencias o notas especiales del huesped."
+        },
+        "actualCheckInAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp del servidor cuando se registro el check-in."
+        },
+        "actualCheckOutAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp del servidor cuando se registro el check-out."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de creacion del servidor (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de actualizacion del servidor (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "guestName",
+        "roomId",
+        "roomNumber",
+        "roomType",
+        "checkInDate",
+        "checkOutDate",
+        "guestsCount",
+        "nightlyRate",
+        "totalAmount",
+        "paidAmount",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/Room"
+      },
+      "description": "Inventario de habitaciones del hotel perteneciente al usuario autenticado."
+    },
+    "/users/{userId}/reservations/{reservationId}": {
+      "schema": {
+        "$ref": "#/entities/Reservation"
+      },
+      "description": "Reservas, check-ins y check-outs pertenecientes al usuario autenticado."
+    }
+  }
+}

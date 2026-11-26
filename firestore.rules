@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isIsoDate(val) {
+      return val is string && val.size() == 10 && val.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isValidRoomType(t) {
+      return t in ['STANDARD', 'DELUXE', 'SUITE', 'PENTHOUSE'];
+    }
+
+    function isValidRoomStatus(s) {
+      return s in ['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE'];
+    }
+
+    function isValidRoom(data) {
+      return data.number is string && data.number.size() >= 1 && data.number.size() <= 10 &&
+             isValidRoomType(data.type) &&
+             data.floor is int && data.floor >= 1 && data.floor <= 50 &&
+             data.nightlyRate is number && data.nightlyRate > 0 && data.nightlyRate <= 100000 &&
+             data.capacity is int && data.capacity >= 1 && data.capacity <= 12 &&
+             isValidRoomStatus(data.status) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidReservationStatus(s) {
+      return s in ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED'];
+    }
+
+    function isValidReservation(data) {
+      return data.guestName is string && data.guestName.size() >= 2 && data.guestName.size() <= 80 &&
+             (!('guestEmail' in data) || (data.guestEmail is string && data.guestEmail.size() <= 120)) &&
+             (!('guestPhone' in data) || (data.guestPhone is string && data.guestPhone.size() <= 30)) &&
+             (!('guestDocument' in data) || (data.guestDocument is string && data.guestDocument.size() <= 30)) &&
+             isValidId(data.roomId) &&
+             data.roomNumber is string && data.roomNumber.size() >= 1 && data.roomNumber.size() <= 10 &&
+             isValidRoomType(data.roomType) &&
+             isIsoDate(data.checkInDate) &&
+             isIsoDate(data.checkOutDate) &&
+             data.checkOutDate > data.checkInDate &&
+             data.guestsCount is int && data.guestsCount >= 1 && data.guestsCount <= 12 &&
+             data.nightlyRate is number && data.nightlyRate > 0 && data.nightlyRate <= 100000 &&
+             data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 10000000 &&
+             data.paidAmount is number && data.paidAmount >= 0 && data.paidAmount <= 10000000 &&
+             isValidReservationStatus(data.status) &&
+             (!('specialRequests' in data) || (data.specialRequests is string && data.specialRequests.size() <= 300)) &&
+             (!('actualCheckInAt' in data) || (data.actualCheckInAt is timestamp && data.actualCheckInAt <= request.time)) &&
+             (!('actualCheckOutAt' in data) || (data.actualCheckOutAt is timestamp && data.actualCheckOutAt <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/rooms/{roomId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(roomId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(roomId) &&
+                       incoming().keys().hasAll(['number', 'type', 'floor', 'nightlyRate', 'capacity', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['number', 'type', 'floor', 'nightlyRate', 'capacity', 'status', 'notes', 'createdAt', 'updatedAt']) &&
+                       isValidRoom(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(roomId) &&
+                       isValidRoom(incoming()) &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action: UpdateRoomStatus (quick housekeeping / check-in / check-out)
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+                         // Action: EditRoom
+                         incoming().diff(existing()).affectedKeys().hasOnly(['number', 'type', 'floor', 'nightlyRate', 'capacity', 'status', 'notes', 'updatedAt'])
+                       );
+
+      allow delete: if isOwner(userId) &&
+                       isValidId(roomId) &&
+                       existing().status != 'OCCUPIED';
+    }
+
+    match /users/{userId}/reservations/{reservationId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(reservationId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(reservationId) &&
+                       incoming().keys().hasAll([
+                         'guestName', 'roomId', 'roomNumber', 'roomType',
+                         'checkInDate', 'checkOutDate', 'guestsCount',
+                         'nightlyRate', 'totalAmount', 'paidAmount', 'status',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'guestName', 'guestEmail', 'guestPhone', 'guestDocument',
+                         'roomId', 'roomNumber', 'roomType',
+                         'checkInDate', 'checkOutDate', 'guestsCount',
+                         'nightlyRate', 'totalAmount', 'paidAmount', 'status',
+                         'specialRequests', 'actualCheckInAt', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().status in ['CONFIRMED', 'CHECKED_IN'] &&
+                       isValidReservation(incoming()) &&
+                       existsAfter(/databases/$(database)/documents/users/$(userId)/rooms/$(incoming().roomId));
+
+      allow update: if isOwner(userId) &&
+                       isValidId(reservationId) &&
+                       isValidReservation(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       existing().status in ['CONFIRMED', 'CHECKED_IN'] && (
+                         // Action: CheckIn (CONFIRMED -> CHECKED_IN)
+                         (
+                           existing().status == 'CONFIRMED' &&
+                           incoming().status == 'CHECKED_IN' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAmount', 'actualCheckInAt', 'updatedAt'])
+                         ) ||
+                         // Action: CheckOut (CHECKED_IN -> CHECKED_OUT)
+                         (
+                           existing().status == 'CHECKED_IN' &&
+                           incoming().status == 'CHECKED_OUT' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAmount', 'actualCheckOutAt', 'updatedAt'])
+                         ) ||
+                         // Action: Cancel (CONFIRMED -> CANCELLED)
+                         (
+                           existing().status == 'CONFIRMED' &&
+                           incoming().status == 'CANCELLED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                         ) ||
+                         // Action: EditReservation (keep status unchanged)
+                         (
+                           incoming().status == existing().status &&
+                           (incoming().roomId == existing().roomId || exists(/databases/$(database)/documents/users/$(userId)/rooms/$(incoming().roomId))) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'guestName', 'guestEmail', 'guestPhone', 'guestDocument',
+                             'roomId', 'roomNumber', 'roomType',
+                             'checkInDate', 'checkOutDate', 'guestsCount',
+                             'nightlyRate', 'totalAmount', 'paidAmount', 'specialRequests', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isOwner(userId) &&
+                       isValidId(reservationId) &&
+                       existing().status != 'CHECKED_IN';
+    }
+  }
+}
