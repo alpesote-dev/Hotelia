@@ -451,7 +451,7 @@ fun RoomFormSheet(
     onDismiss: () -> Unit
 ) {
     var number by remember(existing) { mutableStateOf(existing?.number ?: "") }
-    var type by remember(existing) { mutableStateOf(existing?.roomType ?: RoomType.STANDARD) }
+    var type by remember(existing) { mutableStateOf(existing?.roomType ?: RoomType.DOBLE) }
     var floor by remember(existing) { mutableIntStateOf(existing?.floorInt ?: 1) }
     var rateText by remember(existing) {
         mutableStateOf(

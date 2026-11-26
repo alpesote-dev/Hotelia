@@ -31,9 +31,11 @@ import com.example.data.Reservation
 import com.example.data.ReservationStatus
 import com.example.data.Room
 import com.example.data.RoomStatus
+import com.example.data.RoomType
 import com.example.ui.components.EmptyHotelState
 import com.example.ui.components.RoomDetailPane
 import com.example.ui.components.RoomGridCard
+import com.example.ui.components.RoomInventorySummaryCard
 
 @Composable
 fun RoomsScreen(
@@ -49,6 +51,7 @@ fun RoomsScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedStatus by rememberSaveable { mutableStateOf<RoomStatus?>(null) }
+    var selectedType by rememberSaveable { mutableStateOf<RoomType?>(null) }
     var selectedFloor by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -56,11 +59,18 @@ fun RoomsScreen(
         rooms.map { it.floorInt }.distinct().sorted()
     }
 
-    val filteredRooms = remember(rooms, selectedStatus, selectedFloor) {
+    val activeGuestByRoomId = remember(reservations) {
+        reservations
+            .filter { it.reservationStatus == ReservationStatus.CHECKED_IN }
+            .associate { it.roomId to it.guestName }
+    }
+
+    val filteredRooms = remember(rooms, selectedStatus, selectedType, selectedFloor) {
         rooms.filter { room ->
             val okStatus = selectedStatus == null || room.roomStatus == selectedStatus
+            val okType = selectedType == null || room.roomType == selectedType
             val okFloor = selectedFloor == null || room.floorInt == selectedFloor
-            okStatus && okFloor
+            okStatus && okType && okFloor
         }
     }
 
@@ -97,7 +107,9 @@ fun RoomsScreen(
                                 selected = selectedStatus == null,
                                 onClick = { selectedStatus = null },
                                 label = { Text("Todas (${rooms.size})") },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .testTag("filter_room_all")
                             )
                         }
                         items(RoomStatus.entries) { status ->
@@ -111,6 +123,32 @@ fun RoomsScreen(
                                 modifier = Modifier
                                     .pointerHoverIcon(PointerIcon.Hand)
                                     .testTag("filter_room_${status.name.lowercase()}")
+                            )
+                        }
+                    }
+
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = selectedType == null,
+                                onClick = { selectedType = null },
+                                label = { Text("Todos los tipos") },
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .testTag("filter_room_type_all")
+                            )
+                        }
+                        items(RoomType.entries) { type ->
+                            val count = rooms.count { it.roomType == type }
+                            FilterChip(
+                                selected = selectedType == type,
+                                onClick = {
+                                    selectedType = if (selectedType == type) null else type
+                                },
+                                label = { Text("${type.labelEs} ($count)") },
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .testTag("filter_room_type_${type.name.lowercase()}")
                             )
                         }
                     }
@@ -154,17 +192,31 @@ fun RoomsScreen(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        if (rooms.isNotEmpty()) {
+                            item(key = "inventory_summary") {
+                                RoomInventorySummaryCard(rooms = rooms)
+                            }
+                        }
+
                         if (filteredRooms.isEmpty()) {
-                            item {
+                            item(key = "empty_rooms_state") {
                                 EmptyHotelState(
                                     title = if (rooms.isEmpty()) "Sin habitaciones registradas" else "Ninguna habitación coincide",
                                     subtitle = if (rooms.isEmpty()) {
                                         "Agrega tus habitaciones o carga un hotel de inicio con 8 habitaciones para comenzar."
                                     } else {
-                                        "Prueba quitando los filtros activos."
+                                        "Prueba quitando los filtros de tipo, estado o piso."
                                     },
-                                    primaryButtonText = if (rooms.isEmpty()) "Cargar hotel de inicio" else null,
-                                    onPrimaryClick = if (rooms.isEmpty()) onSeedStarterHotel else null,
+                                    primaryButtonText = if (rooms.isEmpty()) "Cargar hotel de inicio" else "Limpiar filtros",
+                                    onPrimaryClick = if (rooms.isEmpty()) {
+                                        onSeedStarterHotel
+                                    } else {
+                                        {
+                                            selectedStatus = null
+                                            selectedType = null
+                                            selectedFloor = null
+                                        }
+                                    },
                                     secondaryButtonText = if (rooms.isEmpty()) "Crear habitación" else null,
                                     onSecondaryClick = if (rooms.isEmpty()) onAddRoom else null,
                                     isBusy = isBusy
@@ -180,6 +232,7 @@ fun RoomsScreen(
                                         RoomGridCard(
                                             room = room,
                                             isSelected = isSplitView && selectedRoom?.id == room.id,
+                                            activeGuestName = activeGuestByRoomId[room.id],
                                             onCardClick = {
                                                 if (isSplitView) {
                                                     selectedRoomId = room.id

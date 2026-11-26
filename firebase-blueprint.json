@@ -11,8 +11,8 @@
         },
         "type": {
           "type": "string",
-          "enum": ["STANDARD", "DELUXE", "SUITE", "PENTHOUSE"],
-          "description": "Categoria de la habitacion."
+          "enum": ["INDIVIDUAL", "DOBLE", "SUITE"],
+          "description": "Tipo de habitacion (individual, doble, suite)."
         },
         "floor": {
           "type": "integer",
@@ -20,7 +20,7 @@
         },
         "nightlyRate": {
           "type": "number",
-          "description": "Tarifa por noche en moneda local."
+          "description": "Precio por noche en moneda local."
         },
         "capacity": {
           "type": "integer",
@@ -29,7 +29,7 @@
         "status": {
           "type": "string",
           "enum": ["AVAILABLE", "OCCUPIED", "CLEANING", "MAINTENANCE"],
-          "description": "Estado operativo actual de la habitacion."
+          "description": "Estado actual de la habitacion (disponible, ocupada, en limpieza, mantenimiento)."
         },
         "notes": {
           "type": "string",
@@ -88,8 +88,8 @@
         },
         "roomType": {
           "type": "string",
-          "enum": ["STANDARD", "DELUXE", "SUITE", "PENTHOUSE"],
-          "description": "Categoria de la habitacion asignada."
+          "enum": ["INDIVIDUAL", "DOBLE", "SUITE"],
+          "description": "Tipo de la habitacion asignada."
         },
         "checkInDate": {
           "type": "string",

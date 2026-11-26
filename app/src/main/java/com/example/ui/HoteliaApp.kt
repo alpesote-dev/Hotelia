@@ -490,7 +490,8 @@ private fun AuthenticatedHotelContent(
                                         },
                                         onMarkRoomAvailable = { room ->
                                             viewModel.updateRoomStatus(room, com.example.data.RoomStatus.AVAILABLE)
-                                        }
+                                        },
+                                        onOpenRoomsInventory = { navigateTo(ROUTE_ROOMS) }
                                     )
                                 }
                                 composable(ROUTE_RESERVATIONS) {

@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material3.Card
@@ -71,6 +74,7 @@ fun DashboardScreen(
     onCancelReservation: (Reservation) -> Unit,
     onDeleteReservation: (Reservation) -> Unit,
     onMarkRoomAvailable: (Room) -> Unit,
+    onOpenRoomsInventory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedQueue by rememberSaveable { mutableStateOf(DashboardQueue.CHECK_INS) }
@@ -120,6 +124,35 @@ fun DashboardScreen(
                         )
                     }
                     return@LazyColumn
+                }
+
+                item {
+                    FilledTonalButton(
+                        onClick = onOpenRoomsInventory,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize()
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .testTag("dashboard_open_inventory_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Bed,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Ver inventario de habitaciones (${dashboard.rooms.size})",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 if (cleaningRooms.isNotEmpty()) {

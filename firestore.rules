@@ -32,7 +32,7 @@ service cloud.firestore {
     }
 
     function isValidRoomType(t) {
-      return t in ['STANDARD', 'DELUXE', 'SUITE', 'PENTHOUSE'];
+      return t in ['INDIVIDUAL', 'DOBLE', 'SUITE', 'STANDARD', 'DELUXE', 'PENTHOUSE'];
     }
 
     function isValidRoomStatus(s) {

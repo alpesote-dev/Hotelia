@@ -46,7 +46,7 @@ function validRoomPayload(overrides = {}) {
   const now = pastDate(10000);
   return {
     number: "101",
-    type: "DELUXE",
+    type: "DOBLE",
     floor: 1,
     nightlyRate: 145.0,
     capacity: 2,
@@ -66,7 +66,7 @@ function validReservationPayload(overrides = {}) {
     guestDocument: "48291034K",
     roomId: "room_101",
     roomNumber: "101",
-    roomType: "DELUXE",
+    roomType: "DOBLE",
     checkInDate: "2026-11-25",
     checkOutDate: "2026-11-28",
     guestsCount: 2,
@@ -247,4 +247,76 @@ test("Walk-in batch create (status CHECKED_IN) + room OCCUPIED succeeds atomical
     updatedAt: pastDate(1000),
   });
   await assertSucceeds(walkInBatch.commit());
+});
+
+test("Room inventory model: supports INDIVIDUAL/DOBLE/SUITE, statuses AVAILABLE/OCCUPIED/CLEANING, and rejects invalid type/status/nightlyRate", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const roomsCol = aliceDb.collection(`users/${ALICE_UID}/rooms`);
+
+  await assertSucceeds(
+    roomsCol.doc("room_ind").set(
+      validRoomPayload({
+        number: "101",
+        type: "INDIVIDUAL",
+        nightlyRate: 85.0,
+        capacity: 1,
+        status: "AVAILABLE",
+      })
+    )
+  );
+  await assertSucceeds(
+    roomsCol.doc("room_dob").set(
+      validRoomPayload({
+        number: "202",
+        type: "DOBLE",
+        floor: 2,
+        nightlyRate: 140.0,
+        capacity: 2,
+        status: "OCCUPIED",
+      })
+    )
+  );
+  await assertSucceeds(
+    roomsCol.doc("room_sui").set(
+      validRoomPayload({
+        number: "301",
+        type: "SUITE",
+        floor: 3,
+        nightlyRate: 260.0,
+        capacity: 4,
+        status: "CLEANING",
+      })
+    )
+  );
+
+  // Full room edit changing type, nightlyRate, and status
+  await assertSucceeds(
+    roomsCol.doc("room_ind").update({
+      number: "101",
+      type: "DOBLE",
+      floor: 1,
+      nightlyRate: 115.0,
+      capacity: 2,
+      status: "CLEANING",
+      updatedAt: pastDate(500),
+    })
+  );
+
+  // Invalid room type rejected
+  await assertFails(
+    roomsCol.doc("room_bad_type").set(validRoomPayload({ number: "401", type: "PRESIDENTIAL" }))
+  );
+
+  // Invalid room status rejected
+  await assertFails(
+    roomsCol.doc("room_bad_status").set(validRoomPayload({ number: "402", status: "RESERVED" }))
+  );
+
+  // Invalid nightlyRate (<= 0) rejected
+  await assertFails(
+    roomsCol.doc("room_zero_rate").set(validRoomPayload({ number: "403", nightlyRate: 0 }))
+  );
+  await assertFails(
+    roomsCol.doc("room_neg_rate").set(validRoomPayload({ number: "404", nightlyRate: -50 }))
+  );
 });

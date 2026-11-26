@@ -26,8 +26,14 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.KingBed
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.SingleBed
+import androidx.compose.material.icons.outlined.Villa
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,6 +71,7 @@ import com.example.data.Reservation
 import com.example.data.ReservationStatus
 import com.example.data.Room
 import com.example.data.RoomStatus
+import com.example.data.RoomType
 import com.example.ui.HotelDashboardData
 import com.example.ui.theme.StatusAvailableBg
 import com.example.ui.theme.StatusAvailableText
@@ -91,12 +98,180 @@ fun RoomStatusPill(status: RoomStatus, modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(50),
         modifier = modifier
     ) {
-        Text(
-            text = status.labelEs,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = fg,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(fg)
+            )
+            Text(
+                text = status.labelEs,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = fg
+            )
+        }
+    }
+}
+
+@Composable
+fun RoomTypeBadge(roomType: RoomType, modifier: Modifier = Modifier) {
+    val icon = when (roomType) {
+        RoomType.INDIVIDUAL -> Icons.Outlined.SingleBed
+        RoomType.DOBLE -> Icons.Outlined.KingBed
+        RoomType.SUITE -> Icons.Outlined.Villa
+    }
+    val (bg, fg) = when (roomType) {
+        RoomType.INDIVIDUAL -> MaterialTheme.colorScheme.surfaceContainerHigh to MaterialTheme.colorScheme.onSurface
+        RoomType.DOBLE -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) to MaterialTheme.colorScheme.onPrimaryContainer
+        RoomType.SUITE -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    Surface(
+        color = bg,
+        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = fg,
+                modifier = Modifier.size(15.dp)
+            )
+            Text(
+                text = roomType.labelEs,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = fg
+            )
+        }
+    }
+}
+
+@Composable
+fun RoomInventorySummaryCard(
+    rooms: List<Room>,
+    modifier: Modifier = Modifier
+) {
+    val availableCount = remember(rooms) { rooms.count { it.roomStatus == RoomStatus.AVAILABLE } }
+    val occupiedCount = remember(rooms) { rooms.count { it.roomStatus == RoomStatus.OCCUPIED } }
+    val cleaningCount = remember(rooms) { rooms.count { it.roomStatus == RoomStatus.CLEANING } }
+    val avgRate = remember(rooms) {
+        if (rooms.isEmpty()) 0.0 else rooms.sumOf { it.nightlyRate } / rooms.size
+    }
+
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("room_inventory_summary_card")
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Inventario de habitaciones",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${rooms.size} habitaciones · Tarifa media ${HotelDateHelper.formatCurrency(avgRate)}/noche",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    color = StatusAvailableBg,
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CloudDone,
+                            contentDescription = null,
+                            tint = StatusAvailableText,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Firestore",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = StatusAvailableText
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                InventoryStatItem(
+                    label = "Disponibles",
+                    count = availableCount,
+                    tint = StatusAvailableText,
+                    modifier = Modifier.weight(1f)
+                )
+                InventoryStatItem(
+                    label = "Ocupadas",
+                    count = occupiedCount,
+                    tint = StatusOccupiedText,
+                    modifier = Modifier.weight(1f)
+                )
+                InventoryStatItem(
+                    label = "En limpieza",
+                    count = cleaningCount,
+                    tint = StatusCleaningText,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InventoryStatItem(
+    label: String,
+    count: Int,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.titleLarge,
+            color = tint
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -450,9 +625,10 @@ fun RoomGridCard(
     onCardClick: () -> Unit,
     onMarkAvailableClick: () -> Unit,
     isSelected: Boolean = false,
+    activeGuestName: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val interactionSource = remember { MutableInteractionSource() }
     val (containerColor, borderStroke) = rememberDesktopCardAppearance(
         isSelected = isSelected,
         interactionSource = interactionSource
@@ -462,64 +638,141 @@ fun RoomGridCard(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = borderStroke,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp),
         modifier = modifier
             .fillMaxWidth()
             .desktopPointerFeedback(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
-                indication = androidx.compose.foundation.LocalIndication.current,
+                indication = LocalIndication.current,
                 onClick = onCardClick
             )
             .testTag("room_card_${room.id}")
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Column {
-                    Text(
-                        text = "Hab. ${room.number}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${room.roomType.labelEs} · Piso ${room.floorInt}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "HAB",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
+                            )
+                            Text(
+                                text = room.number,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        RoomTypeBadge(roomType = room.roomType)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Layers,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Piso ${room.floorInt}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Group,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "${room.capacityInt} pers.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
                 RoomStatusPill(status = room.roomStatus)
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.Group,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Hasta ${room.capacityInt}",
+                        text = "Precio por noche",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "${HotelDateHelper.formatCurrency(room.nightlyRate)} / noche",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
-                Text(
-                    text = "${HotelDateHelper.formatCurrency(room.nightlyRate)} / noche",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            }
+
+            if (!activeGuestName.isNullOrBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = null,
+                        tint = StatusOccupiedText,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "Huésped: $activeGuestName",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             if (!room.notes.isNullOrBlank()) {
@@ -527,7 +780,7 @@ fun RoomGridCard(
                     text = room.notes,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }

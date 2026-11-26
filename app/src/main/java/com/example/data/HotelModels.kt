@@ -12,21 +12,24 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 enum class RoomType(val labelEs: String, val shortEs: String) {
-    STANDARD("Estándar", "Estándar"),
-    DELUXE("Deluxe", "Deluxe"),
-    SUITE("Suite", "Suite"),
-    PENTHOUSE("Penthouse", "Penthouse");
+    INDIVIDUAL("Individual", "Individual"),
+    DOBLE("Doble", "Doble"),
+    SUITE("Suite", "Suite");
 
     companion object {
-        fun fromRaw(raw: String): RoomType =
-            entries.firstOrNull { it.name == raw } ?: STANDARD
+        fun fromRaw(raw: String): RoomType = when (raw) {
+            "INDIVIDUAL", "STANDARD" -> INDIVIDUAL
+            "DOBLE", "DELUXE" -> DOBLE
+            "SUITE", "PENTHOUSE" -> SUITE
+            else -> entries.firstOrNull { it.name == raw } ?: INDIVIDUAL
+        }
     }
 }
 
 enum class RoomStatus(val labelEs: String) {
     AVAILABLE("Disponible"),
     OCCUPIED("Ocupada"),
-    CLEANING("Limpieza"),
+    CLEANING("En limpieza"),
     MAINTENANCE("Mantenimiento");
 
     companion object {
@@ -52,7 +55,7 @@ enum class ReservationStatus(val labelEs: String) {
 data class Room(
     @DocumentId val id: String = "",
     val number: String = "",
-    val type: String = RoomType.STANDARD.name,
+    val type: String = RoomType.INDIVIDUAL.name,
     val floor: Long = 1L,
     val nightlyRate: Double = 100.0,
     val capacity: Long = 2L,
@@ -77,7 +80,7 @@ data class Reservation(
     val guestDocument: String? = null,
     val roomId: String = "",
     val roomNumber: String = "",
-    val roomType: String = RoomType.STANDARD.name,
+    val roomType: String = RoomType.INDIVIDUAL.name,
     val checkInDate: String = "",
     val checkOutDate: String = "",
     val guestsCount: Long = 1L,
